@@ -1,0 +1,22 @@
+cxx = clang++
+cxxflags = -std=c++20 -Wall -Wextra -pedantic -O0
+ldflags = -O0
+builddir = build
+
+rule cxx
+  command = $cxx $cxxflags -c $in -o $out
+  description = compiling $out
+
+rule link
+  command = $cxx $ldflags -o $out $in $libs
+  description = linking $out
+
+# my files
+build $builddir/main.o: cxx src/main.cpp
+
+# rlImGui stuff
+build $builddir/rlImGui.o: cxx src/rlImGui/rlImGui.cpp
+
+build $builddir/robosim: link $builddir/main.o $builddir/rlImGui.o
+  libs = -lraylib -limgui
+
