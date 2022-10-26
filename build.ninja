@@ -15,12 +15,12 @@ rule link
 build $builddir/main.o: cxx src/main.cpp
 
 # Dear ImGui
-build $builddir/imgui.o: cxx src/imgui.cpp
-build $builddir/imgui_demo.o: cxx src/imgui_demo.cpp
-build $builddir/imgui_draw.o: cxx src/imgui_draw.cpp
-build $builddir/imgui_impl_glfw.o: cxx src/imgui_impl_glfw.cpp
-build $builddir/imgui_tables.o: cxx src/imgui_tables.cpp
-build $builddir/imgui_widgets.o: cxx src/imgui_widgets.cpp
+build $builddir/imgui.o: cxx src/imgui/imgui.cpp
+build $builddir/imgui_demo.o: cxx src/imgui/imgui_demo.cpp
+build $builddir/imgui_draw.o: cxx src/imgui/imgui_draw.cpp
+build $builddir/imgui_impl_glfw.o: cxx src/imgui/imgui_impl_glfw.cpp
+build $builddir/imgui_tables.o: cxx src/imgui/imgui_tables.cpp
+build $builddir/imgui_widgets.o: cxx src/imgui/imgui_widgets.cpp
 
 # rlImGui stuff
 build $builddir/rlImGui.o: cxx src/rlImGui/rlImGui.cpp
