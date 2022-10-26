@@ -29,7 +29,7 @@ if user_os == 'Darwin' or user_os == 'Linux':
         '-Isrc', '-Iinclude',
     ]
     ldflags += [
-        '-lraylib',
+        '-lraylib', '-lbox2d',
     ]
     if user_os == 'Darwin':
         ldflags += ['-framework', 'Cocoa', '-framework', 'IOKit']
