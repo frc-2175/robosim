@@ -5,7 +5,7 @@
     "tasks": [
         {
             "label": "Build",
-            "type": "process",
+            "type": "shell",
             "command": "python3",
             "args": [
                 "build.py"
@@ -19,5 +19,18 @@
                 "isDefault": true
             }
         }
-    ]
+    ],
+    "windows": {
+        "options": {
+            "shell": {
+                "executable": "cmd.exe",
+                "args": [
+                    "/C",
+                    "\"C:/\"Program Files\"/\"Microsoft Visual Studio\"/2022/Community/VC/Auxiliary/Build/vcvars64.bat\"",
+                    "&&"
+                ]
+            }
+        },
+        "problemMatcher": ["$msCompile"],
+    }
 }

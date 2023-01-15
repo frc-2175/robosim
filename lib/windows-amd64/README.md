@@ -1,0 +1,1 @@
+All the libraries in here are static libraries built for the "Multi-threaded" runtime library (/MT). Most "static" libraries for Windows seem to be instead compiled for the "Multi-threaded DLL" runtime library (/MD); in these 

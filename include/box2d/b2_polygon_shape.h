@@ -84,12 +84,4 @@ public:
 	int32 m_count;
 };
 
-inline b2PolygonShape::b2PolygonShape()
-{
-	m_type = e_polygon;
-	m_radius = b2_polygonRadius;
-	m_count = 0;
-	m_centroid.SetZero();
-}
-
 #endif
