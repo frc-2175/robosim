@@ -9,6 +9,7 @@
 #include "rlImGui/rlImGui.h"
 #include "imgui.h"
 #include "b2DrawRayLib/b2DrawRayLib.hpp"
+#include "networktables.h"
 
 std::random_device rd{};
 std::mt19937 gen{rd()};
@@ -36,6 +37,15 @@ void periodic() {
 }
 
 int main() {
+	NTClient client = {0};
+    NTError res = NTConnect(&client, "127.0.0.1");
+    if (res.Error) {
+        printf("%s (%d)\n", res.Error, res.ErrorCode);
+        return 1;
+    }
+
+    NTDisconnect(&client);
+
 	int screenWidth = 1280;
 	int screenHeight = 720;
 

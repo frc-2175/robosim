@@ -11,9 +11,9 @@
             "program": "${workspaceFolder}/build/robosim.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
-            "console": "internalConsole",
+            "console": "integratedTerminal",
             "preLaunchTask": "Build",
         },
         {
