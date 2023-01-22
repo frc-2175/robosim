@@ -159,7 +159,19 @@ void NTEntryFreeContents(NTEntry *e);
 uint16_t NTBigEndianInt16(char *bytes);
 double NTBigEndianDouble(char *bytes);
 
+bool NTGetBoolean(NTClient *client, const char *key, bool defaultValue);
+double NTGetDouble(NTClient *client, const char *key, double defaultValue);
+NTString NTGetString(NTClient *client, const char *key, NTString defaultValue);
+const char *NTGetStringC(NTClient *client, const char *key, const char *defaultValue);
+NTBooleanArray NTGetBooleanArray(NTClient *client, const char *key);
+NTDoubleArray NTGetDoubleArray(NTClient *client, const char *key);
+NTStringArray NTGetStringArray(NTClient *client, const char *key);
+
+// Alias of NTGetDouble.
 double NTGetNumber(NTClient *client, const char *key, double defaultValue);
+
+// Alias of NTGetDoubleArray.
+NTDoubleArray NTGetNumberArray(NTClient *client, const char *key);
 
 bool NTEntryIsValid(NTEntry *entry);
 NTEntry *_NTNextEntry(NTClient *client, NTEntry *it);
@@ -527,7 +539,17 @@ NTString NTStringC(const char *s) {
     return res;
 }
 
-double NTGetNumber(NTClient *client, const char *key, double defaultValue) {
+bool NTGetBoolean(NTClient *client, const char *key, bool defaultValue) {
+    NTString ntKey = NTStringC(key);
+    for (NTEachEntry(client, it)) {
+        if (NTStringCmp(it->Name, ntKey) == 0 && it->Type == NTEntryType_Boolean) {
+            return it->Value.Boolean;
+        }
+    }
+    return defaultValue;
+}
+
+double NTGetDouble(NTClient *client, const char *key, double defaultValue) {
     NTString ntKey = NTStringC(key);
     for (NTEachEntry(client, it)) {
         if (NTStringCmp(it->Name, ntKey) == 0 && it->Type == NTEntryType_Double) {
@@ -535,6 +557,67 @@ double NTGetNumber(NTClient *client, const char *key, double defaultValue) {
         }
     }
     return defaultValue;
+}
+
+NTString NTGetString(NTClient *client, const char *key, NTString defaultValue) {
+    NTString ntKey = NTStringC(key);
+    for (NTEachEntry(client, it)) {
+        if (NTStringCmp(it->Name, ntKey) == 0 && it->Type == NTEntryType_String) {
+            return it->Value.String;
+        }
+    }
+    return defaultValue;
+}
+
+const char *NTGetStringC(NTClient *client, const char *key, const char *defaultValue) {
+    NTString ntKey = NTStringC(key);
+    for (NTEachEntry(client, it)) {
+        if (NTStringCmp(it->Name, ntKey) == 0 && it->Type == NTEntryType_String) {
+            return it->Value.String.Data;
+        }
+    }
+    return defaultValue;
+}
+
+NTBooleanArray NTGetBooleanArray(NTClient *client, const char *key) {
+    NTString ntKey = NTStringC(key);
+    for (NTEachEntry(client, it)) {
+        if (NTStringCmp(it->Name, ntKey) == 0 && it->Type == NTEntryType_BooleanArray) {
+            return it->Value.BooleanArray;
+        }
+    }
+    NTBooleanArray def = {0};
+    return def;
+}
+
+NTDoubleArray NTGetDoubleArray(NTClient *client, const char *key) {
+    NTString ntKey = NTStringC(key);
+    for (NTEachEntry(client, it)) {
+        if (NTStringCmp(it->Name, ntKey) == 0 && it->Type == NTEntryType_DoubleArray) {
+            return it->Value.DoubleArray;
+        }
+    }
+    NTDoubleArray def = {0};
+    return def;
+}
+
+NTStringArray NTGetStringArray(NTClient *client, const char *key) {
+    NTString ntKey = NTStringC(key);
+    for (NTEachEntry(client, it)) {
+        if (NTStringCmp(it->Name, ntKey) == 0 && it->Type == NTEntryType_StringArray) {
+            return it->Value.StringArray;
+        }
+    }
+    NTStringArray def = {0};
+    return def;
+}
+
+double NTGetNumber(NTClient *client, const char *key, double defaultValue) {
+    return NTGetDouble(client, key, defaultValue);
+}
+
+NTDoubleArray NTGetNumberArray(NTClient *client, const char *key) {
+    return NTGetDoubleArray(client, key);
 }
 
 bool NTEntryIsValid(NTEntry *entry) {
