@@ -7,6 +7,7 @@
 #ifndef NETWORKTABLES_H
 #define NETWORKTABLES_H
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -48,7 +49,7 @@ typedef enum NTMessageType {
 
 typedef struct NTString {
     uint16_t Length;
-    char *Data;
+    const char *Data;
 } NTString;
 
 typedef struct NTEntryString {
@@ -89,6 +90,9 @@ typedef struct NTEntry {
     // generation ID of the server connection; used to ensure that we send all
     // the right fields on reconnect
     int ServerGen;
+
+    bool Valid; // If false, entry is "free" and should not be used. Using NTEntryIsValid is recommended.
+    int _Index; // Index in the client's entries array; used for iteration and should not be touched.
 } NTEntry;
 
 // TODO: Make SOCKET define on non-Windows platforms
@@ -99,6 +103,8 @@ typedef struct NTClient {
 
     NTEntry Entries[NT_MAX_ENTRIES];
     int NumEntries;
+
+    void *TempBuffer; // Used for temporary allocations, e.g. string formatting. Uses default if null.
 } NTClient;
 
 typedef struct NTError {
@@ -126,6 +132,8 @@ typedef NT_RESULT(NTStringArray) NTStringArrayResult;
     __res.ErrorCode = code; \
     return __res;
 
+#define NTEachEntry(client, it) NTEntry *it = &(client)->Entries[0]; NTEntryIsValid(it); it = _NTNextEntry(client, it)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -150,6 +158,16 @@ void NTEntryFreeContents(NTEntry *e);
 
 uint16_t NTBigEndianInt16(char *bytes);
 double NTBigEndianDouble(char *bytes);
+
+double NTGetNumber(NTClient *client, const char *key, double defaultValue);
+
+bool NTEntryIsValid(NTEntry *entry);
+NTEntry *_NTNextEntry(NTClient *client, NTEntry *it);
+
+#ifndef NT_TEMP_SIZE
+#define NT_TEMP_SIZE (10 * 1024)
+#endif
+static char _NTTempBuffer[NT_TEMP_SIZE];
 
 #ifdef NETWORKTABLES_IMPLEMENTATION
 
@@ -289,6 +307,7 @@ NTError NTConnect(NTClient *client, const char *addr) {
                 if (!foundExistingEntry) {
                     // Exists only on server; replicate to client.
                     entry = &client->Entries[client->NumEntries];
+                    entry->_Index = client->NumEntries;
                     client->NumEntries += 1;
                 }
 
@@ -298,6 +317,7 @@ NTError NTConnect(NTClient *client, const char *addr) {
                 entry->ID = id;
                 entry->Type = (NTEntryType)type;
                 entry->Value = value;
+                entry->Valid = true;
             } break;
             case NTMessageType_ServerHelloComplete: {
                 goto helloComplete;
@@ -348,12 +368,14 @@ NTStringResult NTRecvString(NTClient *client) {
     }
     str.Length = NTBigEndianInt16(lengthBytes);
     
-    str.Data = (char*)malloc(str.Length);
+    char *buf = (char*)malloc(str.Length + 1);
     if (str.Length > 0) {
-        if (recv(client->Socket, str.Data, str.Length, 0) <= 0) {
+        if (recv(client->Socket, buf, str.Length, 0) <= 0) {
             NT_RETURN_ERROR(NTStringResult, "error reading string data", WSAGetLastError());
         }
     }
+    buf[str.Length] = 0; // null-terminate
+    str.Data = buf;
 
     NTStringResult res = {0};
     res.Value = str;
@@ -438,7 +460,7 @@ int NTStringCmp(NTString a, NTString b) {
 }
 
 void NTStringFree(NTString *s) {
-    free(s->Data);
+    free((void*)s->Data);
 }
 
 void NTBooleanArrayFree(NTBooleanArray *arr) {
@@ -451,14 +473,14 @@ void NTDoubleArrayFree(NTDoubleArray *arr) {
 
 void NTStringArrayFree(NTStringArray *arr) {
     for (int i = 0; i < arr->Length; i++) {
-        free(arr->Elements[i].Data);
+        NTStringFree(&arr->Elements[i]);
     }
     free(arr->Elements);
 }
 
 void NTEntryFreeContents(NTEntry *e) {
     if (e->Name.Data) {
-        free(e->Name.Data);
+        NTStringFree(&e->Name);
     }
     switch (e->Type) {
         case NTEntryType_Boolean:
@@ -496,6 +518,53 @@ double NTBigEndianDouble(char *bytes) {
         bytes[0],
     };
     return *(double*)(swapped);
+}
+
+NTString NTStringC(const char *s) {
+    NTString res = {0};
+    res.Data = s;
+    res.Length = strlen(s);
+    return res;
+}
+
+double NTGetNumber(NTClient *client, const char *key, double defaultValue) {
+    NTString ntKey = NTStringC(key);
+    for (NTEachEntry(client, it)) {
+        if (NTStringCmp(it->Name, ntKey) == 0 && it->Type == NTEntryType_Double) {
+            return it->Value.Double;
+        }
+    }
+    return defaultValue;
+}
+
+bool NTEntryIsValid(NTEntry *entry) {
+    bool valid = entry && entry->Valid;
+    if (valid) {
+        // some sanity checks
+        assert(entry->Name.Data[entry->Name.Length] == 0); // name is null-terminated
+        if (entry->Type == NTEntryType_String) { // string value is null-terminated
+            NTString val = entry->Value.String;
+            assert(val.Data[val.Length] == 0);
+        }
+        if (entry->Type == NTEntryType_StringArray) { // string array values are all null-terminated
+            NTStringArray val = entry->Value.StringArray;
+            for (int i = 0; i < val.Length; i++) {
+                assert(val.Elements[i].Data[val.Elements[i].Length] == 0);
+            }
+        }
+    }
+    return valid;
+}
+
+NTEntry *_NTNextEntry(NTClient *client, NTEntry *it) {
+    for (int i = it->_Index + 1; i < client->NumEntries; i++) {
+        NTEntry *entry = &client->Entries[i];
+        if (NTEntryIsValid(entry)) {
+            assert(entry == &client->Entries[entry->_Index]); // entry index is correct
+            return entry;
+        }
+    }
+    return NULL;
 }
 
 #endif // NETWORKTABLES_IMPLEMENTATION
